@@ -22,3 +22,27 @@ A fast, customizable, 100% local and private QR Code and Barcode design studio b
 - **Code 128** (Universal alphanumeric)
 - **Code 39** (Logistics & Inventory)
 - **EAN-13 & EAN-8** (Retail products)
+- **UPC-A** (North American retail standard)
+- **ISBN-13** (Books & publications)
+- **ITF-14** (Shipping & packaging)
+- **Codabar** (Libraries & logistics)
+- Customizable bar height & human-readable text toggling.
+
+### 3. 🌈 Color Themes & Dynamic Gradients
+- Radial Glow, Horizontal (→), and Vertical (↓) color gradients.
+- Curated presets: *Midnight Navy*, *Cyberpunk Neon*, *Royal Emerald*, *Sunset Glow*, *Ruby Crimson*, and *Monochrome*.
+- **Real-Time WCAG Contrast & Scannability Gauge** with instant contrast ratio calculations.
+
+### 4. 🖼️ Logos, Center Icons & Scannability Cushion
+- Preset brand icons (Wi-Fi, Link, Mail, Star, Shield, GitHub, WhatsApp, UPI).
+- Drag-and-drop custom logo upload (PNG, SVG, JPG, WebP).
+- Automatic protective scannability pad/cushion.
+
+### 5. 🏷️ Frames & Call to Action (CTA)
+- Bottom Banner (*"SCAN ME"*, *"CONNECT TO WI-FI"*, *"SCAN TO PAY"*, custom text).
+- Top Header Banner.
+- Polaroid Photo Card.
+- Modern Pill Badge.
+
+### 6. 📱 11 Rich Content Formats
+- 🔗 **URL / Website Links**
