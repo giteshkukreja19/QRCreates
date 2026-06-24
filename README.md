@@ -46,3 +46,27 @@ A fast, customizable, 100% local and private QR Code and Barcode design studio b
 
 ### 6. 📱 11 Rich Content Formats
 - 🔗 **URL / Website Links**
+- 📝 **Plain Text / Code / Notes**
+- 📶 **Wi-Fi Auto-Connect** (WPA/WPA2/WPA3, WEP, Open, Hidden)
+- 👤 **vCard Contact Cards**
+- ✉️ **Pre-filled Email**
+- 💬 **SMS Messages**
+- 💳 **UPI Instant Payments**
+- 📞 **Phone Calls**
+- 📍 **Map Coordinates (Geo)**
+- 📅 **Calendar Events (iCal)**
+- ₿ **Crypto Addresses** (Bitcoin, Ethereum, Solana, USDT)
+
+### 7. 🔍 Built-in QR & Barcode Scanner
+- Drag-and-drop image file decoder.
+- Live camera/webcam scanner.
+- 1-click load decoded text back into generator.
+
+### 8. 💾 Export & Sharing
+- **PNG** (512px, 1024px HD, 2048px 2K, 4096px Ultra 4K).
+- **SVG** (Infinite Lossless Vector).
+- **WebP & JPEG**.
+- **1-Click Copy Image directly to Clipboard** (paste directly into Figma, Word, Slack!).
+- **Print Template** & History Drawer (`localStorage`).
+
+---
