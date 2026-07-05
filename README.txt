@@ -16,3 +16,12 @@ RUN
 
 4. Open:
    http://127.0.0.1:8000
+
+USAGE
+-----
+Type text into the box. The browser requests a QR PNG from the local
+Python server, and app.py generates it with the `qrcode` library.
+
+No QR library is loaded from a CDN.
+No text is sent to an external website.
+No hosting or database is required.
