@@ -300,3 +300,154 @@ def generate_barcode_image(config):
         "foreground": fill_hex,
         "write_text": show_text,
     }).convert("RGBA")
+
+    frame_style = config.get("frame_style", "none").lower()
+    if frame_style != "none":
+        bar_img = apply_frame(bar_img, config)
+
+    output = io.BytesIO()
+    if out_format in ("jpeg", "jpg"):
+        bar_img = bar_img.convert("RGB")
+        bar_img.save(output, format="JPEG", quality=95)
+        return output.getvalue(), "image/jpeg"
+    elif out_format == "webp":
+        bar_img.save(output, format="WEBP", quality=95)
+        return output.getvalue(), "image/webp"
+    else:
+        bar_img.save(output, format="PNG")
+        return output.getvalue(), "image/png"
+
+
+def apply_frame(inner_img, config):
+    """Add a stylish CTA frame or badge around the code image."""
+    img_w, img_h = inner_img.size
+    frame_style = config.get("frame_style", "banner-bottom").lower()
+    frame_text = (config.get("frame_text") or "SCAN ME").strip()
+    frame_bg_rgb = parse_hex_color(config.get("frame_bg", "#0f172a"), (15, 23, 42))
+    frame_txt_rgb = parse_hex_color(config.get("frame_color", "#ffffff"), (255, 255, 255))
+    canvas_bg = parse_hex_color(config.get("back_color", "#ffffff"), (255, 255, 255)) + (255,)
+
+    font_size = max(14, int(img_w * 0.045))
+    font = get_system_font(size=font_size)
+
+    if frame_style == "banner-bottom":
+        banner_h = int(img_h * 0.16) + 10
+        margin = max(16, int(img_w * 0.05))
+        total_w = img_w + margin * 2
+        total_h = img_h + margin + banner_h + margin
+
+        canvas = Image.new("RGBA", (total_w, total_h), canvas_bg)
+        draw = ImageDraw.Draw(canvas)
+
+        # Draw outer container card with smooth border
+        draw.rounded_rectangle(
+            [(0, 0), (total_w - 1, total_h - 1)],
+            radius=max(12, int(total_w * 0.04)),
+            fill=canvas_bg,
+            outline=(210, 218, 226, 255),
+            width=2,
+        )
+
+        # Paste Code
+        canvas.paste(inner_img, (margin, margin), mask=inner_img)
+
+        # Bottom banner pill
+        banner_rect = [
+            (margin + 4, img_h + margin + 8),
+            (total_w - margin - 4, total_h - margin),
+        ]
+        draw.rounded_rectangle(
+            banner_rect,
+            radius=max(8, int(banner_h * 0.3)),
+            fill=frame_bg_rgb + (255,),
+        )
+        text_center_x = total_w // 2
+        text_center_y = (banner_rect[0][1] + banner_rect[1][1]) // 2
+        draw.text((text_center_x, text_center_y), frame_text, fill=frame_txt_rgb + (255,), font=font, anchor="mm")
+        return canvas
+
+    elif frame_style == "banner-top":
+        banner_h = int(img_h * 0.16) + 10
+        margin = max(16, int(img_w * 0.05))
+        total_w = img_w + margin * 2
+        total_h = img_h + margin * 2 + banner_h
+
+        canvas = Image.new("RGBA", (total_w, total_h), canvas_bg)
+        draw = ImageDraw.Draw(canvas)
+
+        draw.rounded_rectangle(
+            [(0, 0), (total_w - 1, total_h - 1)],
+            radius=max(12, int(total_w * 0.04)),
+            fill=canvas_bg,
+            outline=(210, 218, 226, 255),
+            width=2,
+        )
+
+        banner_rect = [
+            (margin + 4, margin),
+            (total_w - margin - 4, margin + banner_h - 8),
+        ]
+        draw.rounded_rectangle(
+            banner_rect,
+            radius=max(8, int(banner_h * 0.3)),
+            fill=frame_bg_rgb + (255,),
+        )
+        text_center_x = total_w // 2
+        text_center_y = (banner_rect[0][1] + banner_rect[1][1]) // 2
+        draw.text((text_center_x, text_center_y), frame_text, fill=frame_txt_rgb + (255,), font=font, anchor="mm")
+
+        canvas.paste(inner_img, (margin, margin + banner_h), mask=inner_img)
+        return canvas
+
+    elif frame_style == "polaroid":
+        bottom_pad = int(img_h * 0.22)
+        margin = max(20, int(img_w * 0.06))
+        total_w = img_w + margin * 2
+        total_h = img_h + margin + bottom_pad
+
+        canvas = Image.new("RGBA", (total_w, total_h), (255, 255, 255, 255))
+        draw = ImageDraw.Draw(canvas)
+
+        draw.rounded_rectangle(
+            [(0, 0), (total_w - 1, total_h - 1)],
+            radius=16,
+            fill=(255, 255, 255, 255),
+            outline=(203, 213, 225, 255),
+            width=2,
+        )
+
+        canvas.paste(inner_img, (margin, margin), mask=inner_img)
+        draw.text((total_w // 2, img_h + margin + (bottom_pad // 2)), frame_text, fill=frame_bg_rgb + (255,), font=font, anchor="mm")
+        return canvas
+
+    elif frame_style == "badge":
+        badge_h = int(img_h * 0.12)
+        margin = max(14, int(img_w * 0.04))
+        total_w = img_w + margin * 2
+        total_h = img_h + margin + badge_h + 10
+
+        canvas = Image.new("RGBA", (total_w, total_h), canvas_bg)
+        draw = ImageDraw.Draw(canvas)
+
+        canvas.paste(inner_img, (margin, margin), mask=inner_img)
+
+        badge_w = min(total_w - 30, int(len(frame_text) * font_size * 0.8) + 40)
+        bx1 = (total_w - badge_w) // 2
+        by1 = img_h + margin + 4
+        bx2 = bx1 + badge_w
+        by2 = by1 + badge_h
+        draw.rounded_rectangle([(bx1, by1), (bx2, by2)], radius=badge_h // 2, fill=frame_bg_rgb + (255,))
+        draw.text((total_w // 2, (by1 + by2) // 2), frame_text, fill=frame_txt_rgb + (255,), font=font, anchor="mm")
+        return canvas
+
+    return inner_img
+
+
+class QRHandler(BaseHTTPRequestHandler):
+    def handle(self):
+        try:
+            super().handle()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        except Exception as e:
+            print(f"[server] Connection error: {e}")
