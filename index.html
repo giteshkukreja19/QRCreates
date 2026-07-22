@@ -212,3 +212,217 @@
                                 </div>
                             </div>
                             <div class="grid-2">
+                                <div class="field">
+                                    <label for="upiAmount">Amount (₹ INR, optional)</label>
+                                    <input type="number" id="upiAmount" placeholder="e.g. 500" min="0">
+                                </div>
+                                <div class="field">
+                                    <label for="upiNote">Note (optional)</label>
+                                    <input type="text" id="upiNote" placeholder="e.g. Coffee or Services">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Email Panel -->
+                        <div class="input-panel" id="panel-email">
+                            <div class="field">
+                                <label for="emailTo">Send to</label>
+                                <input type="email" id="emailTo" placeholder="team@company.com">
+                            </div>
+                            <div class="field">
+                                <label for="emailSubject">Subject</label>
+                                <input type="text" id="emailSubject" placeholder="Hello from QRCreate">
+                            </div>
+                            <div class="field">
+                                <label for="emailBody">Message</label>
+                                <textarea id="emailBody" rows="2" placeholder="Hi there..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- SMS Panel -->
+                        <div class="input-panel" id="panel-sms">
+                            <div class="field">
+                                <label for="smsPhone">Phone number</label>
+                                <input type="tel" id="smsPhone" placeholder="+1234567890">
+                            </div>
+                            <div class="field">
+                                <label for="smsMessage">Pre-filled text</label>
+                                <textarea id="smsMessage" rows="2" placeholder="Hey, checking out your product..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Phone Panel -->
+                        <div class="input-panel" id="panel-phone">
+                            <div class="field">
+                                <label for="phoneInput">Phone number</label>
+                                <input type="tel" id="phoneInput" placeholder="+1 (555) 012-3456">
+                            </div>
+                        </div>
+
+                        <!-- Geo Panel -->
+                        <div class="input-panel" id="panel-geo">
+                            <div class="grid-2">
+                                <div class="field">
+                                    <label for="geoLat">Latitude</label>
+                                    <input type="number" id="geoLat" placeholder="37.7749" step="any">
+                                </div>
+                                <div class="field">
+                                    <label for="geoLng">Longitude</label>
+                                    <input type="number" id="geoLng" placeholder="-122.4194" step="any">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Event Panel -->
+                        <div class="input-panel" id="panel-event">
+                            <div class="field">
+                                <label for="eventTitle">Event title</label>
+                                <input type="text" id="eventTitle" placeholder="Launch Meetup">
+                            </div>
+                            <div class="grid-2">
+                                <div class="field">
+                                    <label for="eventStart">Start time</label>
+                                    <input type="datetime-local" id="eventStart">
+                                </div>
+                                <div class="field">
+                                    <label for="eventEnd">End time</label>
+                                    <input type="datetime-local" id="eventEnd">
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label for="eventLocation">Location</label>
+                                <input type="text" id="eventLocation" placeholder="Main Hall or Zoom link">
+                            </div>
+                        </div>
+
+                        <!-- Crypto Panel -->
+                        <div class="input-panel" id="panel-crypto">
+                            <div class="grid-2">
+                                <div class="field">
+                                    <label for="cryptoCurrency">Coin</label>
+                                    <select id="cryptoCurrency">
+                                        <option value="bitcoin">Bitcoin (BTC)</option>
+                                        <option value="ethereum">Ethereum (ETH)</option>
+                                        <option value="solana">Solana (SOL)</option>
+                                        <option value="usdt">Tether (USDT)</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="cryptoAmount">Amount (optional)</label>
+                                    <input type="number" id="cryptoAmount" placeholder="0.05" step="any">
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label for="cryptoAddress">Wallet address</label>
+                                <input type="text" id="cryptoAddress" placeholder="Paste wallet address">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barcode Panel (Shown in Barcode mode) -->
+                <div id="barcodeCategoryContainer" class="card" hidden>
+                    <div class="card-header">
+                        <h2 class="card-title">Barcode settings</h2>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="field">
+                            <label for="barcodeStandard">Standard</label>
+                            <select id="barcodeStandard">
+                                <option value="code128">Code 128 (Universal Text & Digits)</option>
+                                <option value="code39">Code 39 (Logistics)</option>
+                                <option value="ean13">EAN-13 (Standard Retail 12-13 Digits)</option>
+                                <option value="ean8">EAN-8 (Compact Retail)</option>
+                                <option value="upca">UPC-A (North American Retail)</option>
+                                <option value="isbn13">ISBN-13 (Books & Print)</option>
+                                <option value="itf">ITF-14 (Packaging)</option>
+                                <option value="codabar">Codabar (Libraries)</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="barcodeTextInput">Barcode value</label>
+                            <input type="text" id="barcodeTextInput" value="QRCREATE-9921" placeholder="e.g. 1234567890">
+                        </div>
+                    </div>
+                    <label class="checkbox-field">
+                        <input type="checkbox" id="barcodeShowText" checked>
+                        <span>Show text number below bars</span>
+                    </label>
+                </div>
+
+                <!-- Pattern & Style Section -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Shape & Pattern</h2>
+                        <span class="card-subtitle">Choose the look of your code</span>
+                    </div>
+
+                    <div id="qrPatternSelector" class="pattern-grid">
+                        <button class="pattern-card active" data-drawer="square" type="button">
+                            <div class="pattern-preview pattern-square">
+                                <span></span><span></span><span></span><span></span>
+                            </div>
+                            <span class="pattern-name">Classic</span>
+                            <span class="pattern-sub">Standard sharp</span>
+                        </button>
+
+                        <button class="pattern-card" data-drawer="dots" type="button">
+                            <div class="pattern-preview pattern-dots">
+                                <span></span><span></span><span></span><span></span>
+                            </div>
+                            <span class="pattern-name">Dots</span>
+                            <span class="pattern-sub">Circle matrix</span>
+                        </button>
+
+                        <button class="pattern-card" data-drawer="dashes" type="button">
+                            <div class="pattern-preview pattern-dashes">
+                                <span></span><span></span><span></span>
+                            </div>
+                            <span class="pattern-name">Dashes</span>
+                            <span class="pattern-sub">Horizontal bars</span>
+                        </button>
+
+                        <button class="pattern-card" data-drawer="vertical" type="button">
+                            <div class="pattern-preview pattern-vertical">
+                                <span></span><span></span><span></span>
+                            </div>
+                            <span class="pattern-name">Stripes</span>
+                            <span class="pattern-sub">Vertical lines</span>
+                        </button>
+
+                        <button class="pattern-card" data-drawer="rounded" type="button">
+                            <div class="pattern-preview pattern-rounded">
+                                <span></span><span></span><span></span><span></span>
+                            </div>
+                            <span class="pattern-name">Rounded</span>
+                            <span class="pattern-sub">Smooth corners</span>
+                        </button>
+
+                        <button class="pattern-card" data-drawer="gapped" type="button">
+                            <div class="pattern-preview pattern-gapped">
+                                <span></span><span></span><span></span><span></span>
+                            </div>
+                            <span class="pattern-name">Gapped</span>
+                            <span class="pattern-sub">Spaced tiles</span>
+                        </button>
+                    </div>
+
+                    <div id="barcodeDensitySelector" class="field mt-3" hidden>
+                        <div class="slider-label-row">
+                            <label for="barHeightSlider">Bar height</label>
+                            <span id="barHeightVal" class="slider-val">16 mm</span>
+                        </div>
+                        <input type="range" id="barHeightSlider" min="8" max="28" value="16" step="1">
+                    </div>
+                </div>
+
+                <!-- Colors & Palette Section -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Colors</h2>
+                        <span class="card-subtitle">Pick a curated scheme or custom shade</span>
+                    </div>
+
+                    <!-- Preset Palette Chips -->
+                    <div class="palette-chips">
