@@ -385,3 +385,390 @@ function initPatternSelector() {
         });
     });
 }
+
+/* ==========================================================
+   Colors, Gradients & Palettes
+   ========================================================== */
+function initPaletteChips() {
+    const chips = document.querySelectorAll(".palette-chip");
+    chips.forEach(chip => {
+        chip.addEventListener("click", () => {
+            chips.forEach(c => c.classList.remove("active"));
+            chip.classList.add("active");
+
+            state.fillColor = chip.dataset.fill;
+            state.gradColor = chip.dataset.grad;
+            state.backColor = chip.dataset.back;
+            state.gradientType = chip.dataset.gradient;
+
+            syncColorPickers();
+            scheduleRender();
+        });
+    });
+}
+
+function initColorPickers() {
+    const fillInput = document.getElementById("colorFill");
+    const fillHex = document.getElementById("colorFillHex");
+    const gradInput = document.getElementById("colorGrad");
+    const gradHex = document.getElementById("colorGradHex");
+    const backInput = document.getElementById("colorBack");
+    const backHex = document.getElementById("colorBackHex");
+
+    function bindColor(input, hexText, key) {
+        input.addEventListener("input", (e) => {
+            state[key] = e.target.value;
+            hexText.value = e.target.value;
+            evaluateContrast();
+            scheduleRender();
+        });
+        hexText.addEventListener("change", (e) => {
+            let val = e.target.value.trim();
+            if (!val.startsWith("#")) val = "#" + val;
+            if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                state[key] = val;
+                input.value = val;
+                evaluateContrast();
+                scheduleRender();
+            }
+        });
+    }
+
+    bindColor(fillInput, fillHex, "fillColor");
+    bindColor(gradInput, gradHex, "gradColor");
+    bindColor(backInput, backHex, "backColor");
+
+    // Gradient pill options
+    const gradientOptions = document.querySelectorAll(".pill-option");
+    gradientOptions.forEach(opt => {
+        opt.addEventListener("click", () => {
+            gradientOptions.forEach(o => o.classList.remove("active"));
+            opt.classList.add("active");
+            state.gradientType = opt.dataset.gradient;
+            scheduleRender();
+        });
+    });
+}
+
+function syncColorPickers() {
+    document.getElementById("colorFill").value = state.fillColor;
+    document.getElementById("colorFillHex").value = state.fillColor;
+    document.getElementById("colorGrad").value = state.gradColor;
+    document.getElementById("colorGradHex").value = state.gradColor;
+    document.getElementById("colorBack").value = state.backColor;
+    document.getElementById("colorBackHex").value = state.backColor;
+
+    document.querySelectorAll(".pill-option").forEach(opt => {
+        opt.classList.toggle("active", opt.dataset.gradient === state.gradientType);
+    });
+
+    evaluateContrast();
+}
+
+/* ==========================================================
+   Real-Time WCAG Contrast & Scannability Calculator
+   ========================================================== */
+function evaluateContrast() {
+    function hexToLuminance(hex) {
+        let c = hex.replace("#", "");
+        if (c.length === 3) c = c.split("").map(x => x + x).join("");
+        const rgb = [0, 2, 4].map(i => parseInt(c.substr(i, 2), 16) / 255);
+        const srgb = rgb.map(val => val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4));
+        return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+    }
+
+    try {
+        const l1 = hexToLuminance(state.fillColor);
+        const l2 = hexToLuminance(state.backColor);
+        const ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+        const rounded = ratio.toFixed(1);
+
+        contrastRatio.textContent = `Contrast Ratio: ${rounded}:1`;
+        contrastMeter.className = "scannability-banner";
+
+        if (ratio >= 7.0) {
+            contrastMeter.classList.add("scannability-excellent");
+            contrastIcon.textContent = "🟢";
+            contrastTitle.textContent = "Great Contrast";
+            contrastRatio.textContent = `Contrast ${rounded}:1 · Ready for all cameras`;
+        } else if (ratio >= 3.0) {
+            contrastMeter.classList.add("scannability-warning");
+            contrastIcon.textContent = "🟡";
+            contrastTitle.textContent = "Moderate Contrast";
+            contrastRatio.textContent = `Contrast ${rounded}:1 · Best in good lighting`;
+        } else {
+            contrastMeter.classList.add("scannability-poor");
+            contrastIcon.textContent = "🔴";
+            contrastTitle.textContent = "Low Contrast";
+            contrastRatio.textContent = `Contrast ${rounded}:1 · Might fail camera scan`;
+        }
+    } catch {
+        // Fallback
+    }
+}
+
+/* ==========================================================
+   Logo & Center Icon Overlay
+   ========================================================== */
+function initLogoUpload() {
+    const iconButtons = document.querySelectorAll(".icon-preset-btn");
+    const dropzone = document.getElementById("logoDropzone");
+    const fileInput = document.getElementById("logoFileInput");
+    const previewContainer = document.getElementById("logoUploadedPreview");
+    const logoThumb = document.getElementById("logoThumb");
+    const logoFileName = document.getElementById("logoFileName");
+    const removeBtn = document.getElementById("removeLogoBtn");
+    const dropContent = dropzone.querySelector(".dropzone-content");
+
+    // Preset Quick Icons
+    iconButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            iconButtons.forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            state.iconPreset = btn.dataset.icon;
+
+            if (state.iconPreset === "none") {
+                state.logoData = null;
+                previewContainer.hidden = true;
+                dropContent.hidden = false;
+            } else if (PRESET_ICONS[state.iconPreset]) {
+                const svgString = PRESET_ICONS[state.iconPreset];
+                // Rasterize SVG to PNG so Python PIL can open it without error
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = 160;
+                    canvas.height = 160;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, 160, 160);
+                    state.logoData = canvas.toDataURL("image/png");
+                    logoThumb.src = state.logoData;
+                    logoFileName.textContent = `${state.iconPreset.toUpperCase()} icon`;
+                    previewContainer.hidden = false;
+                    dropContent.hidden = true;
+                    scheduleRender();
+                };
+                img.src = "data:image/svg+xml;base64," + btoa(svgString);
+                return;
+            }
+            scheduleRender();
+        });
+    });
+
+    // Custom File Upload
+    dropzone.addEventListener("click", (e) => {
+        if (e.target !== removeBtn) fileInput.click();
+    });
+
+    dropzone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropzone.style.borderColor = "var(--accent-primary)";
+    });
+
+    dropzone.addEventListener("dragleave", () => {
+        dropzone.style.borderColor = "";
+    });
+
+    dropzone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropzone.style.borderColor = "";
+        if (e.dataTransfer.files.length) {
+            handleLogoFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener("change", (e) => {
+        if (e.target.files.length) {
+            handleLogoFile(e.target.files[0]);
+        }
+    });
+
+    function handleLogoFile(file) {
+        if (!file.type.startsWith("image/")) {
+            showToast("Please upload a valid image file", "error");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            state.logoData = e.target.result;
+            state.iconPreset = "custom";
+            iconButtons.forEach(b => b.classList.remove("active"));
+            logoThumb.src = state.logoData;
+            logoFileName.textContent = file.name;
+            previewContainer.hidden = false;
+            dropContent.hidden = true;
+            scheduleRender();
+            showToast("Logo loaded successfully!", "success");
+        };
+        reader.readAsDataURL(file);
+    }
+
+    removeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        state.logoData = null;
+        state.iconPreset = "none";
+        iconButtons.forEach(b => b.classList.toggle("active", b.dataset.icon === "none"));
+        previewContainer.hidden = true;
+        dropContent.hidden = false;
+        fileInput.value = "";
+        scheduleRender();
+    });
+
+    // Sliders
+    const sizeSlider = document.getElementById("logoSizeSlider");
+    const sizeVal = document.getElementById("logoSizeVal");
+    sizeSlider.addEventListener("input", (e) => {
+        state.logoSize = e.target.value / 100;
+        sizeVal.textContent = `${e.target.value}%`;
+        scheduleRender();
+    });
+
+    document.getElementById("logoPadCheckbox").addEventListener("change", (e) => {
+        state.logoPad = e.target.checked;
+        scheduleRender();
+    });
+}
+
+/* ==========================================================
+   Frames & Call To Action (CTA)
+   ========================================================== */
+function initFrames() {
+    const frameCards = document.querySelectorAll(".frame-style-card");
+    const frameOptions = document.getElementById("frameOptionsContainer");
+    const frameTextInput = document.getElementById("frameTextInput");
+    const frameBgColor = document.getElementById("frameBgColor");
+    const frameBgHex = document.getElementById("frameBgColorHex");
+
+    frameCards.forEach(card => {
+        card.addEventListener("click", () => {
+            frameCards.forEach(c => c.classList.remove("active"));
+            card.classList.add("active");
+            state.frameStyle = card.dataset.frame;
+            frameOptions.hidden = state.frameStyle === "none";
+            scheduleRender();
+        });
+    });
+
+    frameTextInput.addEventListener("input", (e) => {
+        state.frameText = e.target.value;
+        scheduleRender();
+    });
+
+    frameBgColor.addEventListener("input", (e) => {
+        state.frameBg = e.target.value;
+        frameBgHex.value = e.target.value;
+        scheduleRender();
+    });
+
+    frameBgHex.addEventListener("change", (e) => {
+        let val = e.target.value.trim();
+        if (!val.startsWith("#")) val = "#" + val;
+        if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+            state.frameBg = val;
+            frameBgColor.value = val;
+            scheduleRender();
+        }
+    });
+
+    // Advanced Quality Settings
+    document.getElementById("errorCorrectionSelect").addEventListener("change", (e) => {
+        state.errorCorrection = e.target.value;
+        scheduleRender();
+    });
+
+    const borderSlider = document.getElementById("borderSlider");
+    const borderVal = document.getElementById("borderVal");
+    borderSlider.addEventListener("input", (e) => {
+        state.border = parseInt(e.target.value, 10);
+        borderVal.textContent = `${state.border} Blocks`;
+        scheduleRender();
+    });
+}
+
+/* ==========================================================
+   Rendering & Server Generation API
+   ========================================================== */
+function scheduleRender() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        renderCode();
+    }, 100);
+}
+
+async function renderCode() {
+    if (!state.currentPayload.trim()) {
+        emptyPreview.hidden = false;
+        mainCodeImage.hidden = true;
+        return;
+    }
+
+    previewLoader.hidden = false;
+    emptyPreview.hidden = true;
+
+    const exportFormat = document.getElementById("exportFormatSelect").value;
+    const exportSize = parseInt(document.getElementById("exportSizeSelect").value, 10);
+
+    const config = {
+        code_type: state.engine,
+        text: state.currentPayload,
+        format: exportFormat,
+        box_size: Math.max(6, Math.round(exportSize / 40)),
+        border: state.border,
+        fill_color: state.fillColor,
+        back_color: state.backColor,
+        gradient_type: state.gradientType,
+        gradient_color: state.gradColor,
+        drawer: state.drawer,
+        error_correction: state.errorCorrection,
+        logo_data: state.logoData,
+        logo_size: state.logoSize,
+        logo_pad: state.logoPad,
+        frame_style: state.frameStyle,
+        frame_text: state.frameText,
+        frame_bg: state.frameBg,
+        frame_color: "#ffffff",
+        barcode_format: state.barcodeStandard,
+        show_text: state.barcodeShowText,
+        bar_height: parseFloat(state.barHeight)
+    };
+
+    try {
+        const response = await fetch("/api/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(config)
+        });
+
+        if (!response.ok) {
+            throw new Error(await response.text());
+        }
+
+        const mime = response.headers.get("Content-Type") || "image/png";
+
+        if (mime.includes("svg")) {
+            const svgText = await response.text();
+            state.rawSvgContent = svgText;
+            const blob = new Blob([svgText], { type: "image/svg+xml" });
+            updatePreviewImage(blob);
+            metaFormat.textContent = "SVG (Vector)";
+        } else {
+            const blob = await response.blob();
+            state.rawSvgContent = null;
+            updatePreviewImage(blob);
+            metaFormat.textContent = `${exportFormat.toUpperCase()} (${exportSize}px)`;
+        }
+
+        saveToHistory({
+            type: state.engine,
+            payload: state.currentPayload,
+            style: state.drawer,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        });
+
+    } catch (err) {
+        console.error("Render failed:", err);
+        showToast("Rendering error: " + err.message, "error");
+    } finally {
+        previewLoader.hidden = true;
+    }
