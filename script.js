@@ -772,3 +772,390 @@ async function renderCode() {
     } finally {
         previewLoader.hidden = true;
     }
+}
+
+function updatePreviewImage(blob) {
+    if (state.currentObjectUrl) {
+        URL.revokeObjectURL(state.currentObjectUrl);
+    }
+    state.currentObjectUrl = URL.createObjectURL(blob);
+    mainCodeImage.src = state.currentObjectUrl;
+    mainCodeImage.hidden = false;
+
+    // Update Mobile Live Thumbnail
+    const mobileThumbImg = document.getElementById("mobileThumbImg");
+    if (mobileThumbImg) {
+        mobileThumbImg.src = state.currentObjectUrl;
+    }
+}
+
+/* ==========================================================
+   Action & Export Buttons
+   ========================================================== */
+function initActionButtons() {
+    document.getElementById("exportFormatSelect").addEventListener("change", () => renderCode());
+    document.getElementById("exportSizeSelect").addEventListener("change", () => renderCode());
+
+    // Download Button
+    document.getElementById("downloadMainBtn").addEventListener("click", () => {
+        if (!state.currentObjectUrl) return;
+        const fmt = document.getElementById("exportFormatSelect").value;
+        const filename = `qrcreate-${state.engine}-${Date.now()}.${fmt}`;
+
+        const a = document.createElement("a");
+        a.href = state.currentObjectUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        showToast(`Downloaded ${filename}`, "success");
+    });
+
+    // Copy Image to Clipboard
+    document.getElementById("copyImageBtn").addEventListener("click", async () => {
+        if (!mainCodeImage.src) return;
+        try {
+            // Create canvas to render PNG blob for clipboard
+            const canvas = document.createElement("canvas");
+            canvas.width = mainCodeImage.naturalWidth || 800;
+            canvas.height = mainCodeImage.naturalHeight || 800;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(mainCodeImage, 0, 0);
+
+            canvas.toBlob(async (blob) => {
+                if (!blob) throw new Error("Could not create image blob");
+                await navigator.clipboard.write([
+                    new ClipboardItem({ "image/png": blob })
+                ]);
+                showToast("Copied PNG Image to clipboard! 📋", "success");
+            }, "image/png");
+        } catch (err) {
+            console.error(err);
+            showToast("Clipboard copy failed. Try download instead.", "error");
+        }
+    });
+
+    // Copy SVG Code
+    document.getElementById("copySvgBtn").addEventListener("click", async () => {
+        if (state.rawSvgContent) {
+            await navigator.clipboard.writeText(state.rawSvgContent);
+            showToast("Copied SVG Vector code! 📋", "success");
+        } else {
+            // Render SVG on the fly
+            try {
+                const res = await fetch("/api/generate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        code_type: state.engine,
+                        text: state.currentPayload,
+                        format: "svg",
+                        fill_color: state.fillColor,
+                        back_color: state.backColor
+                    })
+                });
+                const svgText = await res.text();
+                await navigator.clipboard.writeText(svgText);
+                showToast("Copied SVG Vector code! 📋", "success");
+            } catch (err) {
+                showToast("Failed to copy SVG: " + err.message, "error");
+            }
+        }
+    });
+
+    // Copy Text Payload
+    document.getElementById("copyPayloadBtn").addEventListener("click", async () => {
+        if (!state.currentPayload) return;
+        await navigator.clipboard.writeText(state.currentPayload);
+        showToast("Copied content payload! 📋", "success");
+    });
+
+    // Print Layout
+    document.getElementById("printBtn").addEventListener("click", () => {
+        window.print();
+    });
+
+    // Reset Defaults
+    document.getElementById("resetDefaultsBtn").addEventListener("click", () => {
+        state.fillColor = "#000000";
+        state.gradColor = "#000000";
+        state.backColor = "#ffffff";
+        state.gradientType = "none";
+        state.drawer = "square";
+        state.frameStyle = "none";
+        state.logoData = null;
+        state.iconPreset = "none";
+        syncColorPickers();
+        initPatternSelector();
+        initLogoUpload();
+        updatePayload();
+        showToast("Settings reset to default", "info");
+    });
+}
+
+/* ==========================================================
+   QR & Barcode Scanner / Decoder Modal
+   ========================================================== */
+function initScannerModal() {
+    const modal = document.getElementById("scannerModal");
+    const openBtn = document.getElementById("scannerBtn");
+    const closeBtn = document.getElementById("closeScannerModalBtn");
+    const tabs = document.querySelectorAll(".scanner-tab");
+    const filePanel = document.getElementById("scannerFilePanel");
+    const cameraPanel = document.getElementById("scannerCameraPanel");
+    const fileInput = document.getElementById("scanFileInput");
+    const dropzone = document.getElementById("scanImageDropzone");
+    const resultBox = document.getElementById("scanResultBox");
+    const resultText = document.getElementById("scanResultText");
+    const resultFormat = document.getElementById("scanResultFormat");
+    const toggleCamBtn = document.getElementById("toggleCameraBtn");
+    const cameraVideo = document.getElementById("cameraVideo");
+    const cameraCanvas = document.getElementById("cameraCanvas");
+    const cameraSelect = document.getElementById("cameraSourceSelect");
+
+    function closeModal() {
+        modal.hidden = true;
+        modal.style.display = "none";
+        stopCamera();
+    }
+
+    function openModal() {
+        modal.hidden = false;
+        modal.style.display = "flex";
+    }
+
+    // Expose globally for bottom nav
+    window.openScannerModal = openModal;
+    window.closeScannerModal = closeModal;
+
+    // Ensure initial state is hidden
+    closeModal();
+
+    openBtn.addEventListener("click", () => {
+        openModal();
+    });
+
+    closeBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        closeModal();
+    });
+
+    modal.addEventListener("click", (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Global escape listener
+    window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            if (!modal.hidden) closeModal();
+            const drawer = document.getElementById("historyDrawer");
+            if (drawer && !drawer.hidden) {
+                drawer.hidden = true;
+                drawer.style.display = "none";
+            }
+        }
+    });
+
+    tabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+            tabs.forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
+            const mode = tab.dataset.scanMode;
+            if (mode === "camera") {
+                filePanel.hidden = true;
+                cameraPanel.hidden = false;
+                startCamera();
+            } else {
+                filePanel.hidden = false;
+                cameraPanel.hidden = true;
+                stopCamera();
+            }
+        });
+    });
+
+    // File Dropzone & Direct Camera Input
+    dropzone.addEventListener("click", () => fileInput.click());
+    dropzone.addEventListener("dragover", (e) => e.preventDefault());
+    dropzone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        if (e.dataTransfer.files.length) decodeImageFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener("change", (e) => {
+        if (e.target.files.length) decodeImageFile(e.target.files[0]);
+    });
+
+    // Direct Mobile Camera Capture Button (Works on all mobile devices & HTTP/HTTPS)
+    const scanCameraDirectBtn = document.getElementById("scanCameraDirectBtn");
+    const scanCameraDirectInput = document.getElementById("scanCameraDirectInput");
+    if (scanCameraDirectBtn && scanCameraDirectInput) {
+        scanCameraDirectBtn.addEventListener("click", () => {
+            scanCameraDirectInput.click();
+        });
+        scanCameraDirectInput.addEventListener("change", (e) => {
+            if (e.target.files.length) decodeImageFile(e.target.files[0]);
+        });
+    }
+
+    function decodeImageFile(file) {
+        showToast("Processing code... ⚡", "info");
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                // Optimize camera photos: downscale to max 1000px for instant 50ms decoding
+                const maxDim = 1000;
+                let w = img.width;
+                let h = img.height;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) {
+                        h = Math.round((h * maxDim) / w);
+                        w = maxDim;
+                    } else {
+                        w = Math.round((w * maxDim) / h);
+                        h = maxDim;
+                    }
+                }
+
+                const canvas = document.createElement("canvas");
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, w, h);
+                const imageData = ctx.getImageData(0, 0, w, h);
+
+                if (window.jsQR) {
+                    const code = jsQR(imageData.data, imageData.width, imageData.height);
+                    if (code) {
+                        displayScanResult(code.data, "QR_CODE");
+                        return;
+                    }
+                }
+
+                // Check BarcodeDetector API if supported
+                if ("BarcodeDetector" in window) {
+                    const detector = new BarcodeDetector();
+                    detector.detect(canvas)
+                        .then(barcodes => {
+                            if (barcodes.length) {
+                                displayScanResult(barcodes[0].rawValue, barcodes[0].format);
+                            } else {
+                                showToast("No QR code or barcode detected in image", "warning");
+                            }
+                        })
+                        .catch(() => showToast("Could not detect barcode", "warning"));
+                } else {
+                    showToast("No readable code found in image", "warning");
+                }
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Camera handling
+    async function startCamera() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showToast("Live webcam requires HTTPS. Please take a photo directly!", "info");
+            if (scanCameraDirectInput) scanCameraDirectInput.click();
+            return;
+        }
+
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(d => d.kind === "videoinput");
+            cameraSelect.innerHTML = videoDevices.map(d => `<option value="${d.deviceId}">${d.label || "Camera"}</option>`).join("");
+
+            const constraints = {
+                video: { facingMode: "environment" }
+            };
+
+            cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+            cameraVideo.srcObject = cameraStream;
+            toggleCamBtn.textContent = "Stop Camera";
+            requestAnimationFrame(scanCameraFrame);
+        } catch (err) {
+            console.error("Camera access error:", err);
+            showToast("Camera access unavailable. Taking photo directly...", "info");
+            if (scanCameraDirectInput) scanCameraDirectInput.click();
+        }
+    }
+
+    function stopCamera() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(t => t.stop());
+            cameraStream = null;
+        }
+        cancelAnimationFrame(scanAnimationId);
+        toggleCamBtn.textContent = "Start Camera";
+    }
+
+    toggleCamBtn.addEventListener("click", () => {
+        if (cameraStream) stopCamera();
+        else startCamera();
+    });
+
+    function scanCameraFrame() {
+        if (cameraVideo.readyState === cameraVideo.HAVE_ENOUGH_DATA) {
+            cameraCanvas.width = cameraVideo.videoWidth;
+            cameraCanvas.height = cameraVideo.videoHeight;
+            const ctx = cameraCanvas.getContext("2d");
+            ctx.drawImage(cameraVideo, 0, 0, cameraCanvas.width, cameraCanvas.height);
+            const imageData = ctx.getImageData(0, 0, cameraCanvas.width, cameraCanvas.height);
+
+            if (window.jsQR) {
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                if (code) {
+                    displayScanResult(code.data, "QR_CODE");
+                    stopCamera();
+                    return;
+                }
+            }
+        }
+        scanAnimationId = requestAnimationFrame(scanCameraFrame);
+    }
+
+    function renderSmartActions(rawText) {
+        const container = document.getElementById("scanSmartActions");
+        if (!container) return;
+        container.innerHTML = "";
+
+        const text = (rawText || "").trim();
+        if (!text) return;
+
+        // 1. URL / Website Link -> Redirect / Open Link
+        let url = null;
+        if (/^https?:\/\//i.test(text)) {
+            url = text;
+        } else if (/^(www\.[a-z0-9\-]+(\.[a-z]{2,})+)/i.test(text)) {
+            url = "https://" + text;
+        }
+
+        if (url) {
+            const btn = document.createElement("a");
+            btn.className = "btn-smart-action";
+            btn.href = url;
+            btn.target = "_blank";
+            btn.rel = "noopener noreferrer";
+            btn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                <span>Open Link in Browser ↗</span>
+            `;
+            container.appendChild(btn);
+            return;
+        }
+
+        // 2. Contact Card (vCard or MeCard) -> Save Contact (.vcf)
+        const isVCard = /BEGIN:VCARD/i.test(text);
+        const isMeCard = /^MECARD:/i.test(text);
+
+        if (isVCard || isMeCard) {
+            let vcfContent = text;
+            let contactName = "Contact";
+
+            if (isVCard) {
+                const matchName = text.match(/FN:(.+)/i) || text.match(/N:(.+)/i);
+                if (matchName && matchName[1]) contactName = matchName[1].trim().replace(/;/g, " ");
+            } else if (isMeCard) {
