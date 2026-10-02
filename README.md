@@ -70,3 +70,25 @@ A fast, customizable, 100% local and private QR Code and Barcode design studio b
 - **Print Template** & History Drawer (`localStorage`).
 
 ---
+
+## 🚀 Getting Started
+
+### 1. Install Dependencies
+```bash
+python3 -m pip install "qrcode[pil]" python-barcode
+```
+
+### 2. Run Locally
+```bash
+python3 app.py
+```
+
+### 3. Open in Browser
+Open `http://127.0.0.1:8000`
+
+---
+
+## 🔒 100% Privacy Guarantee
+- All QR codes and Barcodes are rendered directly on your local machine.
+- Zero telemetry, no external tracking, no cloud dependencies.
+
