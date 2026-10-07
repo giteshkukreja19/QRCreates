@@ -25,3 +25,12 @@ Python server, and app.py generates it with the `qrcode` library.
 No QR library is loaded from a CDN.
 No text is sent to an external website.
 No hosting or database is required.
+
+FILES
+-----
+app.py      Local Python web server + QR generator
+index.html  User interface
+style.css   UI styling
+script.js   Instant generation / download logic
+README.txt  Instructions
+
