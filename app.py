@@ -451,3 +451,155 @@ class QRHandler(BaseHTTPRequestHandler):
             pass
         except Exception as e:
             print(f"[server] Connection error: {e}")
+
+    def _send(self, status, content_type, data):
+        try:
+            if isinstance(data, str):
+                data = data.encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.end_headers()
+            self.wfile.write(data)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        except Exception as e:
+            print(f"[server] Send error: {e}")
+
+    def do_OPTIONS(self):
+        try:
+            self.send_response(204)
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, HEAD")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.end_headers()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
+    def do_HEAD(self):
+        self.do_GET()
+
+    def do_GET(self):
+        try:
+            parsed = urlparse(self.path)
+
+            if parsed.path in ("/", "/index.html"):
+                self._serve_file("index.html", "text/html; charset=utf-8")
+                return
+            elif parsed.path in ("/qr", "/api/generate"):
+                params = parse_qs(parsed.query, keep_blank_values=True)
+                config = {k: v[0] for k, v in params.items()}
+                self._handle_generation(config)
+                return
+
+            # Serve static file from BASE_DIR (manifest.json, sw.js, css, js, icons, etc.)
+            rel_path = parsed.path.lstrip("/")
+            file_path = (BASE_DIR / rel_path).resolve()
+            try:
+                if file_path.is_file() and (file_path == BASE_DIR or file_path.is_relative_to(BASE_DIR)):
+                    content_type, _ = mimetypes.guess_type(str(file_path))
+                    if not content_type:
+                        content_type = "application/octet-stream"
+                    if content_type.startswith("text/") or content_type in ("application/javascript", "application/json", "application/manifest+json", "image/svg+xml"):
+                        content_type += "; charset=utf-8"
+                    self._serve_file(rel_path, content_type)
+                    return
+            except Exception:
+                pass
+
+            if parsed.path == "/favicon.ico":
+                icon_path = BASE_DIR / "icons" / "icon-192.png"
+                if icon_path.exists():
+                    self._serve_file("icons/icon-192.png", "image/png")
+                else:
+                    self._send(204, "image/x-icon", b"")
+                return
+
+            self._send(404, "text/plain; charset=utf-8", "Not found")
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        except Exception as e:
+            print(f"[server] Error in do_GET: {e}")
+
+    def do_POST(self):
+        try:
+            parsed = urlparse(self.path)
+            if parsed.path in ("/api/generate", "/qr"):
+                try:
+                    content_length = int(self.headers.get("Content-Length", 0))
+                    body = self.rfile.read(content_length).decode("utf-8")
+                    config = json.loads(body) if body else {}
+                    self._handle_generation(config)
+                except Exception as err:
+                    self._send(400, "application/json", json.dumps({"error": f"Invalid request body: {err}"}))
+                return
+
+            self._send(404, "application/json", json.dumps({"error": "Endpoint not found"}))
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        except Exception as e:
+            print(f"[server] Error in do_POST: {e}")
+
+    def _serve_file(self, filename, content_type):
+        path = BASE_DIR / filename
+        if not path.exists():
+            self._send(404, "text/plain; charset=utf-8", f"Missing file: {filename}")
+            return
+        self._send(200, content_type, path.read_bytes())
+
+    def _handle_generation(self, config):
+        text = config.get("text", "").strip()
+        if not text:
+            self._send(400, "text/plain; charset=utf-8", "No text supplied.")
+            return
+
+        code_type = config.get("code_type", "qr").lower()
+
+        try:
+            if code_type == "barcode":
+                img_data, mime_type = generate_barcode_image(config)
+            else:
+                img_data, mime_type = generate_qr_image(config)
+
+            self._send(200, mime_type, img_data)
+        except Exception as exc:
+            print(f"[server] Generation error: {exc}")
+            self._send(500, "text/plain; charset=utf-8", f"Generation failed: {exc}")
+
+    def log_message(self, fmt, *args):
+        print(f"[server] {self.address_string()} - {fmt % args}")
+
+
+if __name__ == "__main__":
+    import socket
+    local_ip = "127.0.0.1"
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+    except Exception:
+        pass
+
+    print("=" * 60)
+    print("  🚀 QRCreate — Next-Gen QR & Barcode Studio")
+    print("=" * 60)
+    print(f"  🖥️  Computer URL:  http://localhost:{PORT}")
+    print(f"  📱  Android Phone: http://{local_ip}:{PORT}")
+    print("  Features: Multi-style QR, Barcodes, Logos, PWA Mobile App")
+    print("=" * 60)
+
+    server = ThreadingHTTPServer((HOST, PORT), QRHandler)
+    server.daemon_threads = True
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nStopping QRCreate server...")
+    finally:
+        server.server_close()
+
+# refinement 45
