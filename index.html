@@ -640,3 +640,217 @@
                     <div id="contrastMeter" class="scannability-banner scannability-excellent">
                         <span id="contrastIcon" class="scannability-dot">🟢</span>
                         <div class="scannability-info">
+                            <span id="contrastTitle">Great Contrast</span>
+                            <span id="contrastRatio">Ready for mobile camera scanning</span>
+                        </div>
+                    </div>
+
+                    <!-- Canvas Stage -->
+                    <div class="canvas-stage" id="previewViewport">
+                        <div class="loader-overlay" id="previewLoader" hidden>
+                            <div class="spinner"></div>
+                            <span>Updating code...</span>
+                        </div>
+                        <div id="emptyPreview" class="empty-state" hidden>
+                            <p>Type text to create your code</p>
+                        </div>
+                        <img id="mainCodeImage" alt="QR Code or Barcode preview" class="preview-img">
+                    </div>
+
+                    <!-- Quick Summary -->
+                    <div class="preview-meta-row">
+                        <div class="meta-col">
+                            <span class="meta-title">Characters</span>
+                            <span id="metaLength" class="meta-val">36 chars</span>
+                        </div>
+                        <div class="meta-col">
+                            <span class="meta-title">File format</span>
+                            <span id="metaFormat" class="meta-val">PNG (1024px)</span>
+                        </div>
+                        <div class="meta-col">
+                            <span class="meta-title">Pattern</span>
+                            <span id="metaStyle" class="meta-val">■ Classic</span>
+                        </div>
+                    </div>
+
+                    <!-- Export Options -->
+                    <div class="export-controls">
+                        <div class="grid-2">
+                            <div class="field">
+                                <label for="exportFormatSelect">Format</label>
+                                <select id="exportFormatSelect">
+                                    <option value="png" selected>PNG (High-res image)</option>
+                                    <option value="svg">SVG (Vector for print)</option>
+                                    <option value="webp">WebP (Web optimized)</option>
+                                    <option value="jpeg">JPEG</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="exportSizeSelect">Resolution</label>
+                                <select id="exportSizeSelect">
+                                    <option value="512">Standard (512 px)</option>
+                                    <option value="1024" selected>HD (1024 px)</option>
+                                    <option value="2048">2K Print (2048 px)</option>
+                                    <option value="4096">4K Ultra (4096 px)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="actions-stack">
+                        <button id="downloadMainBtn" class="btn-primary" type="button">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            <span>Download Code</span>
+                        </button>
+
+                        <div class="button-grid">
+                            <button id="copyImageBtn" class="btn-secondary" title="Copy PNG image to clipboard" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                <span>Copy image</span>
+                            </button>
+                            <button id="copySvgBtn" class="btn-secondary" title="Copy SVG Vector code" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                                <span>Copy SVG</span>
+                            </button>
+                            <button id="copyPayloadBtn" class="btn-secondary" title="Copy text content" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                <span>Copy text</span>
+                            </button>
+                            <button id="printBtn" class="btn-secondary" title="Print code" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                                <span>Print</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </main>
+
+        <!-- Scanner / Decoder Modal -->
+        <div id="scannerModal" class="modal-backdrop" hidden>
+            <div class="modal-dialog">
+                <div class="modal-header">
+                    <div class="modal-title-group">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+                        <h3>Scan or Upload Code</h3>
+                    </div>
+                    <button id="closeScannerModalBtn" class="btn-close" aria-label="Close dialog" type="button">&times;</button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="segmented-control mb-3">
+                        <button class="scanner-tab active" data-scan-mode="file" type="button">Upload image</button>
+                        <button class="scanner-tab" data-scan-mode="camera" type="button">Webcam camera</button>
+                    </div>
+
+                    <!-- File Dropzone -->
+                    <div id="scannerFilePanel" class="scanner-panel active">
+                        <div class="dropzone" id="scanImageDropzone">
+                            <input type="file" id="scanFileInput" accept="image/*" hidden>
+                            <div class="dropzone-content">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                <span class="dropzone-title">Upload Image or Screenshot</span>
+                                <span class="dropzone-sub">Choose a photo or screenshot with a code</span>
+                            </div>
+                        </div>
+
+                        <!-- Direct Camera Capture (Works on all mobile browsers & HTTP/HTTPS) -->
+                        <div class="mt-2">
+                            <input type="file" id="scanCameraDirectInput" accept="image/*" capture="environment" hidden>
+                            <button id="scanCameraDirectBtn" class="btn-primary" style="margin-top: 10px;" type="button">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                                <span>Take Photo with Camera</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Live Camera View -->
+                    <div id="scannerCameraPanel" class="scanner-panel" hidden>
+                        <div class="camera-viewport">
+                            <video id="cameraVideo" playsinline autoplay></video>
+                            <canvas id="cameraCanvas" hidden></canvas>
+                            <div class="camera-reticle"></div>
+                        </div>
+                        <div class="input-row mt-2">
+                            <select id="cameraSourceSelect">
+                                <option value="">Select camera</option>
+                            </select>
+                            <button id="toggleCameraBtn" class="btn-secondary" type="button">Start camera</button>
+                        </div>
+                    </div>
+
+                    <!-- Decoded Result -->
+                    <div id="scanResultBox" class="scan-result" hidden>
+                        <div class="scan-result-header">
+                            <span class="badge-success">Decoded data</span>
+                            <span id="scanResultFormat" class="format-tag">QR_CODE</span>
+                        </div>
+                        <textarea id="scanResultText" readonly rows="3"></textarea>
+
+                        <!-- Smart Context Actions (Open Link, Save Contact, etc.) -->
+                        <div id="scanSmartActions" class="scan-smart-actions mt-2"></div>
+
+                        <div class="grid-2 mt-2">
+                            <button id="copyDecodedBtn" class="btn-secondary" type="button">Copy text</button>
+                            <button id="loadIntoEditorBtn" class="btn-primary" type="button">Load into QRCreate</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn-subtle" onclick="document.getElementById('closeScannerModalBtn').click()" type="button">Done</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Drawer -->
+        <aside id="historyDrawer" class="drawer" hidden>
+            <div class="drawer-header">
+                <div class="drawer-title-group">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <h3>Recent Codes</h3>
+                </div>
+                <div class="drawer-actions">
+                    <button id="clearHistoryBtn" class="btn-text-danger" type="button">Clear</button>
+                    <button id="closeHistoryBtn" class="btn-close" aria-label="Close history" type="button">&times;</button>
+                </div>
+            </div>
+            <div id="historyList" class="drawer-content">
+                <!-- Dynamically filled -->
+            </div>
+        </aside>
+
+        <!-- Toasts -->
+        <div id="toastContainer" class="toast-container"></div>
+
+        <!-- Mobile Bottom App Bar -->
+        <nav class="mobile-app-nav" id="mobileAppNav" aria-label="Mobile Navigation">
+            <button class="mobile-tab-btn active" data-tab="create" type="button" id="tabBtnCreate">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                <span>Design</span>
+            </button>
+            <button class="mobile-tab-btn" data-tab="preview" type="button" id="tabBtnPreview">
+                <div class="nav-icon-badge-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect></svg>
+                    <span class="nav-dot-indicator"></span>
+                </div>
+                <span>Preview</span>
+            </button>
+            <button class="mobile-tab-btn" data-tab="scan" type="button" id="tabBtnScan">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+                <span>Scan</span>
+            </button>
+            <button class="mobile-tab-btn" data-tab="recent" type="button" id="tabBtnRecent">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <span>Recent</span>
+            </button>
+        </nav>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="/script.js?v=2.4"></script>
+</body>
+</html>
+
+<!-- refinement 46 -->
