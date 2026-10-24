@@ -34,3 +34,14 @@ class handler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", mime_type)
             self.send_header("Content-Length", str(len(img_data)))
             self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(img_data)
+        except Exception as e:
+            self.send_response(500)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+
+    def do_GET(self):
+        self.do_POST()

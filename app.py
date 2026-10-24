@@ -601,5 +601,3 @@ if __name__ == "__main__":
         print("\nStopping QRCreate server...")
     finally:
         server.server_close()
-
-# refinement 45

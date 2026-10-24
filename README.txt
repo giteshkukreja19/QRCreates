@@ -33,4 +33,3 @@ index.html  User interface
 style.css   UI styling
 script.js   Instant generation / download logic
 README.txt  Instructions
-

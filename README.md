@@ -91,4 +91,3 @@ Open `http://127.0.0.1:8000`
 ## 🔒 100% Privacy Guarantee
 - All QR codes and Barcodes are rendered directly on your local machine.
 - Zero telemetry, no external tracking, no cloud dependencies.
-

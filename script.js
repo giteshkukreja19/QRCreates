@@ -1159,3 +1159,389 @@ function initScannerModal() {
                 const matchName = text.match(/FN:(.+)/i) || text.match(/N:(.+)/i);
                 if (matchName && matchName[1]) contactName = matchName[1].trim().replace(/;/g, " ");
             } else if (isMeCard) {
+                const nameMatch = text.match(/N:([^;]+)/i);
+                const telMatch = text.match(/TEL:([^;]+)/i);
+                const emailMatch = text.match(/EMAIL:([^;]+)/i);
+                const noteMatch = text.match(/NOTE:([^;]+)/i);
+
+                contactName = nameMatch ? nameMatch[1].trim() : "Contact";
+                vcfContent = [
+                    "BEGIN:VCARD",
+                    "VERSION:3.0",
+                    `FN:${contactName}`,
+                    telMatch ? `TEL;TYPE=CELL:${telMatch[1].trim()}` : "",
+                    emailMatch ? `EMAIL:${emailMatch[1].trim()}` : "",
+                    noteMatch ? `NOTE:${noteMatch[1].trim()}` : "",
+                    "END:VCARD"
+                ].filter(Boolean).join("\r\n");
+            }
+
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "btn-smart-action";
+            btn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M19 11v6m3-3h-6"/></svg>
+                <span>Save Contact (${escapeHtml(contactName)}) 👤</span>
+            `;
+
+            btn.addEventListener("click", () => {
+                const blob = new Blob([vcfContent], { type: "text/vcard;charset=utf-8" });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = `${contactName.replace(/[^a-zA-Z0-9_-]/g, "_")}.vcf`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                showToast(`Saving ${contactName} to contacts...`, "success");
+            });
+
+            container.appendChild(btn);
+            return;
+        }
+
+        // 3. Phone Call
+        if (/^tel:/i.test(text) || /^\+?[0-9\s\-()]{7,20}$/.test(text)) {
+            const phoneNum = text.replace(/^tel:/i, "").trim();
+            const btn = document.createElement("a");
+            btn.className = "btn-smart-action";
+            btn.href = `tel:${phoneNum}`;
+            btn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                <span>Call Phone: ${escapeHtml(phoneNum)} 📞</span>
+            `;
+            container.appendChild(btn);
+            return;
+        }
+
+        // 4. Email
+        if (/^mailto:/i.test(text) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) {
+            const mail = text.replace(/^mailto:/i, "").trim();
+            const btn = document.createElement("a");
+            btn.className = "btn-smart-action";
+            btn.href = `mailto:${mail}`;
+            btn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                <span>Send Email: ${escapeHtml(mail)} ✉️</span>
+            `;
+            container.appendChild(btn);
+            return;
+        }
+
+        // 5. UPI Payment
+        if (/^upi:\/\/pay/i.test(text)) {
+            const btn = document.createElement("a");
+            btn.className = "btn-smart-action";
+            btn.href = text;
+            btn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                <span>Pay via UPI App 💸</span>
+            `;
+            container.appendChild(btn);
+            return;
+        }
+    }
+
+    function displayScanResult(data, format) {
+        resultBox.hidden = false;
+        resultBox.style.display = "block";
+        resultText.value = data;
+        resultFormat.textContent = format.toUpperCase();
+        renderSmartActions(data);
+        showToast("Code decoded successfully! 🎉", "success");
+        setTimeout(() => {
+            resultBox.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 80);
+    }
+
+    document.getElementById("copyDecodedBtn").addEventListener("click", () => {
+        navigator.clipboard.writeText(resultText.value);
+        showToast("Decoded text copied!", "success");
+    });
+
+    document.getElementById("loadIntoEditorBtn").addEventListener("click", () => {
+        const val = resultText.value;
+        closeModal();
+
+        if (state.engine === "barcode") {
+            document.getElementById("barcodeTextInput").value = val;
+        } else {
+            // Check if URL
+            if (val.startsWith("http://") || val.startsWith("https://")) {
+                document.querySelector('.type-chip[data-type="url"]').click();
+                document.getElementById("urlInput").value = val;
+            } else {
+                document.querySelector('.type-chip[data-type="text"]').click();
+                document.getElementById("textInput").value = val;
+            }
+        }
+        updatePayload();
+        showToast("Loaded decoded text into QRCreate!", "success");
+    });
+}
+
+/* ==========================================================
+   History & Saved Presets
+   ========================================================= */
+function initHistoryDrawer() {
+    const historyBtn = document.getElementById("historyBtn");
+    const drawer = document.getElementById("historyDrawer");
+    const closeBtn = document.getElementById("closeHistoryBtn");
+    const clearBtn = document.getElementById("clearHistoryBtn");
+    const countBadge = document.getElementById("historyCountBadge");
+
+    function closeDrawer() {
+        drawer.hidden = true;
+        drawer.style.display = "none";
+    }
+
+    function openDrawer() {
+        renderHistoryList();
+        drawer.hidden = false;
+        drawer.style.display = "flex";
+    }
+
+    // Expose globally for mobile bottom nav
+    window.openHistoryDrawer = openDrawer;
+    window.closeHistoryDrawer = closeDrawer;
+
+    // Ensure initial state is hidden
+    closeDrawer();
+
+    updateHistoryBadge();
+
+    historyBtn.addEventListener("click", () => {
+        openDrawer();
+    });
+
+    closeBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        closeDrawer();
+    });
+
+    clearBtn.addEventListener("click", () => {
+        localStorage.removeItem("qrcreate_history");
+        renderHistoryList();
+        updateHistoryBadge();
+        showToast("History cleared", "info");
+    });
+
+    function updateHistoryBadge() {
+        const history = JSON.parse(localStorage.getItem("qrcreate_history") || "[]");
+        if (history.length > 0) {
+            countBadge.textContent = history.length;
+            countBadge.hidden = false;
+        } else {
+            countBadge.hidden = true;
+        }
+    }
+}
+
+function saveToHistory(item) {
+    let history = JSON.parse(localStorage.getItem("qrcreate_history") || "[]");
+    // Avoid duplicate top item
+    if (history.length > 0 && history[0].payload === item.payload) return;
+    history.unshift(item);
+    if (history.length > 20) history.pop();
+    localStorage.setItem("qrcreate_history", JSON.stringify(history));
+
+    const badge = document.getElementById("historyCountBadge");
+    badge.textContent = history.length;
+    badge.hidden = false;
+}
+
+function renderHistoryList() {
+    const historyList = document.getElementById("historyList");
+    const history = JSON.parse(localStorage.getItem("qrcreate_history") || "[]");
+
+    if (history.length === 0) {
+        historyList.innerHTML = `<p style="text-align:center; color:var(--text-tertiary); padding:30px 0;">No items in history yet.</p>`;
+        return;
+    }
+
+    historyList.innerHTML = history.map((item, idx) => `
+        <div class="history-card" data-index="${idx}">
+            <div class="history-info">
+                <div class="history-text">${escapeHtml(item.payload)}</div>
+                <div class="history-time">${item.type.toUpperCase()} • ${item.style} • ${item.timestamp}</div>
+            </div>
+            <button class="btn-inline" onclick="restoreHistoryItem(${idx})">Load</button>
+        </div>
+    `).join("");
+}
+
+window.restoreHistoryItem = function(index) {
+    const history = JSON.parse(localStorage.getItem("qrcreate_history") || "[]");
+    const item = history[index];
+    if (!item) return;
+
+    if (item.type === "barcode") {
+        document.querySelector('.segment-tab[data-engine="barcode"]').click();
+        document.getElementById("barcodeTextInput").value = item.payload;
+    } else {
+        document.querySelector('.segment-tab[data-engine="qr"]').click();
+        document.querySelector('.type-chip[data-type="text"]').click();
+        document.getElementById("textInput").value = item.payload;
+    }
+
+    document.getElementById("historyDrawer").hidden = true;
+    updatePayload();
+    showToast("Restored from history!", "success");
+};
+
+/* ==========================================================
+   Toast Notification System
+   ========================================================== */
+function showToast(message, type = "info") {
+    const container = document.getElementById("toastContainer");
+    const toast = document.createElement("div");
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(8px) scale(0.95)";
+        toast.style.transition = "all 0.2s ease";
+        setTimeout(() => toast.remove(), 200);
+    }, 2800);
+}
+
+function escapeHtml(str) {
+    return str.replace(/[&<>'"]/g, tag => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;'
+    }[tag] || tag));
+}
+
+// ==========================================================
+// Mobile Application & PWA Engine
+// ==========================================================
+function initMobileAppEngine() {
+    // Default active tab on mobile: 'create' (Design)
+    document.body.setAttribute("data-active-tab", "create");
+
+    function setMobileTab(tab) {
+        if (tab === "scan") {
+            const scannerBtn = document.getElementById("scannerBtn");
+            if (scannerBtn) {
+                scannerBtn.click();
+            } else if (window.openScannerModal) {
+                window.openScannerModal();
+            } else {
+                const scannerModal = document.getElementById("scannerModal");
+                if (scannerModal) {
+                    scannerModal.hidden = false;
+                    scannerModal.style.display = "flex";
+                }
+            }
+            return;
+        }
+
+        if (tab === "recent") {
+            const historyBtn = document.getElementById("historyBtn");
+            if (historyBtn) {
+                historyBtn.click();
+            } else if (window.openHistoryDrawer) {
+                window.openHistoryDrawer();
+            } else {
+                const historyDrawer = document.getElementById("historyDrawer");
+                if (historyDrawer) {
+                    historyDrawer.hidden = false;
+                    historyDrawer.style.display = "flex";
+                }
+            }
+            return;
+        }
+
+        document.body.setAttribute("data-active-tab", tab);
+
+        // Update tab buttons
+        document.querySelectorAll(".mobile-tab-btn").forEach(btn => {
+            if (btn.getAttribute("data-tab") === tab) {
+                btn.classList.add("active");
+            } else {
+                btn.classList.remove("active");
+            }
+        });
+
+        // Smooth scroll to top
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    // Bottom Navigation Bar tabs
+    document.querySelectorAll(".mobile-tab-btn").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const tab = btn.getAttribute("data-tab");
+            setMobileTab(tab);
+        });
+    });
+
+    // Mobile Live Mini Bar CTA -> Switches directly to Preview
+    const mobileViewPreviewBtn = document.getElementById("mobileViewPreviewBtn");
+    if (mobileViewPreviewBtn) {
+        mobileViewPreviewBtn.addEventListener("click", () => {
+            setMobileTab("preview");
+        });
+    }
+
+    // Mobile Back Button in Preview -> Switches back to Design
+    const mobileBackToEditBtn = document.getElementById("mobileBackToEditBtn");
+    if (mobileBackToEditBtn) {
+        mobileBackToEditBtn.addEventListener("click", () => {
+            setMobileTab("create");
+        });
+    }
+
+    // PWA Service Worker Registration
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("/sw.js").catch(err => {
+                console.log("[PWA] ServiceWorker registration error: ", err);
+            });
+        });
+    }
+
+    // PWA Install Prompt handling
+    let deferredPrompt = null;
+    const pwaInstallBtn = document.getElementById("pwaInstallBtn");
+
+    window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (pwaInstallBtn) {
+            pwaInstallBtn.removeAttribute("hidden");
+        }
+    });
+
+    if (pwaInstallBtn) {
+        pwaInstallBtn.addEventListener("click", async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === "accepted") {
+                    pwaInstallBtn.setAttribute("hidden", "");
+                    showToast("QRCreate app installed successfully!", "success");
+                }
+                deferredPrompt = null;
+            } else {
+                showToast("To install on iOS: Tap Share ➔ 'Add to Home Screen'");
+            }
+        });
+    }
+
+    window.addEventListener("appinstalled", () => {
+        if (pwaInstallBtn) {
+            pwaInstallBtn.setAttribute("hidden", "");
+        }
+        showToast("QRCreate is installed and ready on your home screen!", "success");
+    });
+}
+
+

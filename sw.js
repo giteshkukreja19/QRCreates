@@ -40,3 +40,17 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api/') || url.pathname === '/qr') {
     return;
   }
+
+  // Network-First strategy: always try latest from server, fallback to cache if offline
+  event.respondWith(
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const resClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, resClone));
+        }
+        return networkResponse;
+      })
+      .catch(() => caches.match(event.request))
+  );
+});
